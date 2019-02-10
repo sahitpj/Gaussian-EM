@@ -39,6 +39,9 @@ class EstimationMaximisation(object):
         self.cov_matrices = None
         self.weights = None
         self.gamma = None
+        if parametric == 'No':
+            raise Warning('Non - Parametric version to be implememted however not available, shifting to Parametric version...')
+            self.parametric == 'Yes'
 
     def initilize_means(self):
         '''Initialises Means for the Gaussians
@@ -112,7 +115,7 @@ class EstimationMaximisation(object):
         self.gamma = k
         return k
 
-    def update(self):
+    def update_parametric(self):
         '''Estimation Maxiisation Update Function
 
         Firstly step M is done - update the gamma 
@@ -122,32 +125,44 @@ class EstimationMaximisation(object):
         updated K-step.
         '''
         gamma = torch.ones((self.no_of_points, self.no_of_gaussians)) 
+        # Finding the gamma matrix for the iteration, go through
+        # all points for all Gaussians
         for i in xrange(self.no_of_points):
             l = 0.0
             for j in xrange(self.no_of_gaussians):
-                prob = multivariate_normal.pdf(self.points[i], self.means[j], self.cov_matrices[j])*self.weights[j]
-                # print 'a'
+                # Define Multivariate Function
+                normal_function = MultivariateNormal(self.means[j], self.cov_matrices[j])
+                # Find the porbability for point
+                prob = torch.exp(normal_function.log_prob(self.points[i]))*self.weights[j]
+                # Update the gamma fiunction
                 gamma[i, j] = prob
                 l += prob
             for j in xrange(self.no_of_gaussians):
+                # Normalise the Gamma function over a Gaussian
                 gamma[i, j] = gamma[i, j]/l
         self.gamma = gamma
-        s = torch.sum(gamma, dim=0) #row wise sum of gamma matrix
+        # row wise sum of gamma matrix
+        s = torch.sum(gamma, dim=0) 
         for i in xrange(self.no_of_gaussians):
-            self.weights[i] = s[i]/self.no_of_points #updating weights
+             # updating weights using the weight calculation formula
+            self.weights[i] = s[i]/self.no_of_points
+            # define a mean tensor
             mean = torch.zeros((self.dimension, ))
             for j in xrange(self.no_of_points): 
                 # print np.argwhere(np.isnan(gamma[j, i]))
                 # k = self.points[j]*gamma[j, i])
+
+                # Find the weighted mean using points "Parametric EM"
                 mean += self.points[j]*gamma[j, i])
             self.means[i] = mean/s[i] #updating means
         for i in xrange(self.no_of_gaussians):
+            # update covaraince matrices
             g = torch.tensor(self.points).view(self.no_of_points, self.dimension) - self.means[i].view(1, self.dimension)        
             self.cov_matrices[i] = torch.mm(g.t(), self.gamma[:, i]*g) #updating covariance matrices
         # print self.means
 
 
-    def update_inverse(self):
+    def update_inverse_parametric(self):
         '''Estimation Maxiisation Update Function inverse
 
         In order to tackle the low probability of points
@@ -160,6 +175,7 @@ class EstimationMaximisation(object):
         converge.
         '''
         s = torch.sum(self.gamma, dim=0)
+        # Initialise weights, means ans=d covriance matrices
         self.weights = list()
         self.means = list()
         self.cov_matrices = list()
@@ -167,6 +183,7 @@ class EstimationMaximisation(object):
             self.weights.append(0)
             self.means.append(0)
             self.cov_matrices.append(0)
+        # update the means and weights of the Gaussians
         for i in xrange(self.no_of_gaussians):
             self.weights[i] = s[i]/self.no_of_points
             mean = torch.zeros((self.dimension, ))
@@ -174,10 +191,12 @@ class EstimationMaximisation(object):
                 # k = np.multiply(self.points[j], self.gamma[j, i])
                 mean += self.points[j] * self.gamma[j, i]
             self.means[i] = mean/s[i]
+        # update the covariance matrices for the Gaussians
         for i in xrange(self.no_of_gaussians):
             g = torch.tensor(self.points).view(self.no_of_points, self.dimension)-self.means[i].view(1, self.dimension))        
             self.cov_matrices[i] = torch.mm(g.t(), self.gamma[:, i].view(self.gamma.shape[0], 1)*g)
         gamma = torch.ones((self.no_of_points, self.no_of_gaussians)) 
+        # Using means, covariance matrices and weights, update gamma
         for i in xrange(self.no_of_points):
             l = 0.0
             for j in xrange(self.no_of_gaussians):
@@ -190,6 +209,12 @@ class EstimationMaximisation(object):
         self.gamma = gamma
         
 
+    def update_NonParametric(self):
+        NotImplemented
+
+    def update_inverse_NonParametric(self):
+        NotImplemented
+
 
     def iterate(self):
         for i in xrange(self.no_of_iterations):
@@ -201,7 +226,10 @@ class EstimationMaximisation(object):
                 if self.weights == None:
                     self.initialize_parameters()
             print 'iteration - '+str(i+1)
-            self.update()
+            if self.parametric == 'Yes':
+                self.update_parametric()
+            else:
+                self.update_NonParametric()
             print ''
             print 'iteration complete'
 
@@ -211,11 +239,10 @@ class EstimationMaximisation(object):
                 if self.gamma == None:
                     self.initialize_gamma()
             print 'iteration - '+str(i+1)
-            self.update_inverse()
+            if self.parametric == 'Yes':
+                self.update_inverse_parametric()
+            else:
+                self.update_inverse_NonParametric()
             print ''
         print '#####Iterations complete#######'
-
-    def log_likelihood(self):
-        return 1
-
 

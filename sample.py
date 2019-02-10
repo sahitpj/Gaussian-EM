@@ -40,16 +40,25 @@ class GaussianMMSampler(object):
                 want to sample
 
         Returns:
-            List of tensor points from the mixture
+            1. List of tensor points from the mixture
             model
+            2. Gaussian IDs for the points
         '''
         points = list()
         gaussian_id = list()
+
+        #iterates through the list of Gaussians to
+        # sample points in according to their percentages
+        # from each gaussian
+
         for i in xrange(self.no_of_gaussians):
+            # Define Gaussian Sampler
             gs = GaussianSampler(self.means[i], self.cov_matrices[i])
+            # Sample points from Gaussian Sampler
             sample_points = gs.sample_list(int(math.ceil(self.weights[i]*no_of_points)))
             points.extend(sample_points)
             for j in xrange(int(math.ceil(self.weights[i]*no_of_points))):
+                # Adding the Gaussian Ids for the points
                 gaussian_id.append(i+1)
         assert(len(points) >= no_of_points)
         return points, gaussian_id
@@ -57,34 +66,70 @@ class GaussianMMSampler(object):
 
 
 class GaussianSampler(object):
+    '''Gaussian Sampler
+
+    Function which samples from a Gaussian
+    given the mean and the covariance of the 
+    Gaussian
+
+    Args:
+        mean: Mean of the Gaussian
+        cov: covariance matrix of the Gaussian
+    '''
     def __init__(self, mean, cov):
         self.mean = mean
         self.cov = cov
+        # Define normal function using Pytorch's multivaraiate function
         self.normal_function = MultivariateNormal(self.mean, self.cov)
 
     def sample(self):
+        '''Sampling function 
+
+        Returns:
+            Sampled point
+        '''
         return self.normal_function.sample()
         
 
     def __sample(self, q):
+        '''Private function for Sampling
+
+        Has an extra argument to place a 
+        multiprocessing Queue in order to extract 
+        the returned value
+        '''
         q.put(self.normal_function.sample())
 
     def sample_list(self, no_of_points):
         sample_points = list()
+        # Sample points separately in each thread
         for i in xrange(no_of_points):
             q = Queue()
             p = Process(target=self.__sample, args=(q,))
             p.start()
+            # retrieves point from Queue
             sample_points.append(q.get())
             p.join()
         return sample_points #being returnd as list of points.
 
 
 class GaussianRSampler(GaussianSampler):
+    '''Gaussian Random Sampler
+
+    Randomly creates a Gaussian of a specific
+    dimension, which can then be sampled from
+
+    Args:
+        dimensions: The number of dimensions for 
+            the Gaussian
+    '''
     def __init__(self, dimensions):
         self.dimensions = dimensions
+        # Initilaise points from the function
         self.points = self.initilize_points()
+        # Initialise mean from the generated points
         self.mean = self.initilize_mean()
+        # Initialise Covariance Matrix from the given points
         self.cov = self.initilize_cov_matrix()
         self.zero = torch.zeros(self.mean.shape)
 
@@ -94,7 +139,6 @@ class GaussianRSampler(GaussianSampler):
     def initilize_mean(self):
         k =  torch.mean(self.points, dim=0).view(self.dimensions, )
         assert(k.shape[0] == self.dimensions)
-        print k
         return k
 
     def initilize_cov_matrix(self):
@@ -104,9 +148,15 @@ class GaussianRSampler(GaussianSampler):
         return k
         
     def distance(self, point):
+        '''Returns L2 Norm of the point from the center
+        which is equivalent to euclidean distance
+        '''
         return torch.norm(point-self.mean, p=2)
 
     def sample_distance(self):
+        '''Samples distance of a random point
+        sampled from the Gaussian
+        '''
         point = self.normal_function.sample()
         return torch.norm(point-self.mean)
 
