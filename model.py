@@ -225,24 +225,24 @@ class EstimationMaximisation(object):
                     self.initilize_cov_matrices()
                 if self.weights == None:
                     self.initialize_parameters()
-            print 'iteration - '+str(i+1)
+            print('iteration - '+str(i+1))
             if self.parametric == 'Yes':
                 self.update_parametric()
             else:
                 self.update_NonParametric()
-            print ''
-            print 'iteration complete'
+            print('')
+            print('iteration complete')
 
     def iterate_inverse(self):    
         for i in xrange(self.no_of_iterations):
             if i == 0:
                 if self.gamma == None:
                     self.initialize_gamma()
-            print 'iteration - '+str(i+1)
+            print('iteration - '+str(i+1))
             if self.parametric == 'Yes':
                 self.update_inverse_parametric()
             else:
                 self.update_inverse_NonParametric()
-            print ''
-        print '#####Iterations complete#######'
+            print('')
+        print('#####Iterations complete#######')
 
