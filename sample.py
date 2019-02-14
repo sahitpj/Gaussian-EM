@@ -137,11 +137,22 @@ class GaussianRSampler(GaussianSampler):
         return torch.rand(self.dimensions+100, self.dimensions)
 
     def initilize_mean(self):
+        '''Initialise mean using given points
+
+        Returns
+            mean
+        '''
         k =  torch.mean(self.points, dim=0).view(self.dimensions, )
         assert(k.shape[0] == self.dimensions)
         return k
 
     def initilize_cov_matrix(self):
+        '''Initialise covariance matrix using the given points
+
+        Returns
+            covariance matrix
+        '''
+        # using utils function to find covariance matrix
         k = cov(self.points)
         assert(k.shape[0] == self.dimensions)
         assert(k.shape[1] == self.dimensions)
