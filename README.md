@@ -1,4 +1,4 @@
-# Multivariate Gaussian Esimation Maximisation   
+# Multivariate Gaussian Estimation Maximisation   
 The following is an implemenation of Multivariate Gaussian Mixture Models, estimation maximisation algorithm, written using Pytorch.
 
 for a demo, run the `demo.py` file.
